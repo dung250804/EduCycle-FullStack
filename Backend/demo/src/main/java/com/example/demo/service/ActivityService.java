@@ -8,7 +8,9 @@ import com.example.demo.repository.ActivityRepository;
 import com.example.demo.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,7 +36,23 @@ public class ActivityService {
     }
 
     public Activity createActivity(ActivityDTO activityDTO) {
-        Activity activity = toEntity(activityDTO);
+        Activity activity = new Activity();
+        activity.setActivityId(UUID.randomUUID().toString());
+        activity.setTitle(activityDTO.getTitle());
+        activity.setDescription(activityDTO.getDescription());
+        activity.setGoalAmount(activityDTO.getGoalAmount());
+        activity.setAmountRaised(activityDTO.getAmountRaised());
+        activity.setImage(activityDTO.getImage());
+        activity.setActivityType(ActivityType.fromString(activityDTO.getActivityType()));
+        activity.setStartDate(activityDTO.getStartDate());
+        activity.setEndDate(activityDTO.getEndDate());
+        activity.setCreatedAt(LocalDateTime.now());
+        activity.setUpdatedAt(LocalDateTime.now());
+
+        UserAccount organizer = userRepository.findById(activityDTO.getOrganizerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organizer not found"));
+        activity.setOrganizer(organizer);
+
         return activityRepository.save(activity);
     }
 

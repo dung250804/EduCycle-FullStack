@@ -16,7 +16,7 @@ interface Item {
 
 interface Post {
   postId: string;
-  item: Item
+  item: Item;
   price?: number; // Added for ItemSale
 }
 
@@ -42,6 +42,10 @@ const Fundraisers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const userRole = localStorage.getItem("userRole");
+  const isRepresentative = userRole?.includes("Representative");
+  const isAdmin = userRole?.includes("Admin");
+
   useEffect(() => {
     const fetchActivities = async () => {
       try {
@@ -61,7 +65,6 @@ const Fundraisers = () => {
 
     fetchActivities();
   }, []);
-
 
   const filteredFundraisers = activities.filter((fundraiser) => {
     const matchesSearch =
@@ -101,7 +104,7 @@ const Fundraisers = () => {
     <div className="flex flex-col min-h-screen">
       <Navigation />
       <div className="container py-8">
-        <div className="flex flex-col md:flex-row justify-between posts-start md:posts-center mb-8 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold">School Fundraisers</h1>
             <p className="text-muted-foreground mt-1">Support important causes at our school</p>
@@ -116,15 +119,17 @@ const Fundraisers = () => {
           </div>
         </div>
 
-        <div className="bg-educycle-blue/10 rounded-lg p-6 mb-8 flex flex-col md:flex-row justify-between posts-center gap-4">
-          <div>
-            <h2 className="text-xl font-medium">Have a cause you care about?</h2>
-            <p className="text-muted-foreground">Teachers and student clubs can start fundraising campaigns.</p>
+        {(isRepresentative || isAdmin) && (
+          <div className="bg-educycle-blue/10 rounded-lg p-6 mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h2 className="text-xl font-medium">Have a cause you care about?</h2>
+              <p className="text-muted-foreground">Teachers and student clubs can start fundraising campaigns.</p>
+            </div>
+            <Link to="/create-activity">
+              <Button>Start a Fundraiser</Button>
+            </Link>
           </div>
-          <Link to="/create-activity">
-            <Button>Start a Fundraiser</Button>
-          </Link>
-        </div>
+        )}
 
         <div className="flex gap-2 mb-6">
           <Button
@@ -136,7 +141,7 @@ const Fundraisers = () => {
           <Button
             variant={typeFilter === "Donation" ? "default" : "outline"}
             onClick={() => setTypeFilter("Donation")}
-            className="flex posts-center gap-2"
+            className="flex items-center gap-2"
           >
             <HandHeart className="h-4 w-4" />
             Post Donations
@@ -144,7 +149,7 @@ const Fundraisers = () => {
           <Button
             variant={typeFilter === "Fundraiser" ? "default" : "outline"}
             onClick={() => setTypeFilter("Fundraiser")}
-            className="flex posts-center gap-2"
+            className="flex items-center gap-2"
           >
             <ShoppingCart className="h-4 w-4" />
             Purchase Items

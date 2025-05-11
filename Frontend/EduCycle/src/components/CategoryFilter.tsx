@@ -1,11 +1,10 @@
-
 import { Button } from "@/components/ui/button";
 import { Folder } from "lucide-react";
 
 export interface CategoryProps {
-  categories: string[];
+  categories: { id: string; name: string }[];
   selectedCategory: string | null;
-  onSelectCategory: (category: string | null) => void;
+  onSelectCategory: (categoryId: string | null) => void;
 }
 
 const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }: CategoryProps) => {
@@ -24,12 +23,12 @@ const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }: Cate
         </Button>
         {categories.map((category) => (
           <Button
-            key={category}
-            variant={selectedCategory === category ? "default" : "outline"}
+            key={category.id} // Use category.id as the key
+            variant={selectedCategory === category.id ? "default" : "outline"}
             size="sm"
-            onClick={() => onSelectCategory(category)}
+            onClick={() => onSelectCategory(category.id)} // Pass category.id
           >
-            {category}
+            {category.name} 
           </Button>
         ))}
       </div>

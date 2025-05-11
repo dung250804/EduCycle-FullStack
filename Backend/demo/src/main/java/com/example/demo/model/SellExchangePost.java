@@ -34,6 +34,7 @@ public class SellExchangePost {
     @Column(nullable = false)
     private PostStatusType status = PostStatusType.Pending;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PostStateType state = PostStateType.Pending;
 

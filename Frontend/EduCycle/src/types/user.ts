@@ -20,24 +20,25 @@ export type ItemType = "Liquidation" | "Exchange" | "Donation";
 // Interface for Post, matching Sell_Exchange_Posts table
 export interface Post {
   postId: string;
-  seller: {
-    userId: string; // Matches seller_id (VARCHAR)
-    name: string;
-    avatar: string; // Matches seller_avatar (VARCHAR)
-  };
+
   item: {
     itemName: string; // Matches item_name (VARCHAR)
+    owner: {
+      userId: string; // Matches owner_id (VARCHAR)
+      name: string; // Matches owner_name (VARCHAR)
+      avatar: string; // Matches owner_avatar (VARCHAR)
+    }
     category: {
       categoryId: string; // Matches category_id (VARCHAR)
       name: string; // Matches category_name (VARCHAR)
       description: string; // Matches category_description (VARCHAR)
     };
-    price: number;
     imageUrl: string; // Matches item_image (VARCHAR)
   };
+  price: number;
   title: string;
   description: string;
-  type: 'Liquidation' | 'Exchange';
+  type: 'Liquidation' | 'Exchange' | 'Fundraiser';
   status: string;
   createdAt: string;
   updatedAt: string;

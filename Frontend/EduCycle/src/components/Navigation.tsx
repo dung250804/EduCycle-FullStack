@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Search, LogIn, ShoppingBag, UserRound } from "lucide-react";
@@ -19,10 +18,13 @@ const Navigation = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
-  
   // Mock auth state - in a real app, this would come from your auth system
   const isAuthenticated = true;
-  
+  const userRole = localStorage.getItem("userRole");
+  const isMember = userRole?.includes("Member");
+  const isAdmin = userRole?.includes("Admin");
+  const isManager = userRole?.includes("Approval Manager") || userRole?.includes("Warehouse Manager");
+
   const handleSignOut = () => {
     // In a real app, this would call your auth service's logout method
     toast.success("You have been signed out");
@@ -63,12 +65,14 @@ const Navigation = () => {
               Fundraisers
             </Button>
           </Link>
-          <Link to="/sell">
-            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5" />
-              Sell Item
-            </Button>
-          </Link>
+          {(isMember || isAdmin) && (
+            <Link to="/sell">
+              <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                Sell Item
+              </Button>
+            </Link>
+          )}
           
           {isAuthenticated ? (
             <DropdownMenu>
@@ -76,7 +80,7 @@ const Navigation = () => {
                 <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 p-0">
                   <Avatar>
                     <AvatarImage src={localStorage.getItem("userAvatar") || 'https://api.dicebear.com/7.x/avataaars/svg?seed=LilPump'} alt={localStorage.getItem("userName") || 'User'} />
-                    <AvatarFallback>{localStorage.getItem("userName").substring(0, 2).toUpperCase() || 'User'}</AvatarFallback>
+                    <AvatarFallback>{localStorage.getItem("userName")?.substring(0, 2).toUpperCase() || 'User'}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -88,7 +92,7 @@ const Navigation = () => {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile" className="w-full cursor-pointer">
+                  <Link to={isAdmin ? "/admin/users" : isManager ? "/admin/items" : "/profile"} className="w-full cursor-pointer">  
                     <UserRound className="mr-2 h-4 w-4" />
                     Profile
                   </Link>

@@ -40,7 +40,7 @@ const Index = () => {
     };
 
     fetchData();
-  });
+  },[]);
   return <div className="flex flex-col min-h-screen">
       <Navigation />
       
@@ -150,7 +150,7 @@ const Index = () => {
               <FundraiserCard
                 organizer={""}
                 participants={0}
-                fundraiserType={undefined}
+                activityType={undefined}
                 key={fundraiser.id}
                 {...fundraiser}
                 endDate={new Date(fundraiser.endDate)}

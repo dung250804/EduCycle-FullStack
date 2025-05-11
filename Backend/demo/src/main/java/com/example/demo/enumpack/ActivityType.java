@@ -2,9 +2,9 @@ package com.example.demo.enumpack;
 
 public enum ActivityType {
     Donation, Fundraiser;
-    public static UserStatus fromString(String state) {
+    public static ActivityType fromString(String state) {
         try {
-            return UserStatus.valueOf(state);
+            return ActivityType.valueOf(state);
         } catch (IllegalArgumentException | NullPointerException e) {
             return null; // Hoặc: throw new IllegalArgumentException("Invalid state: " + state);
         }

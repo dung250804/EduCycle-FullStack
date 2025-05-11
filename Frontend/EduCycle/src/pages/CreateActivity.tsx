@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -28,15 +27,20 @@ interface ActivityFormData {
   dateEnd: string;
   location: string;
   itemTypes: string;
-  target: string; // Add this field to the interface
+  target: string;
   image?: FileList;
 }
+
+// Load Cloudinary environment variables
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
 const CreateActivity = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // State for drag feedback
+
   const form = useForm<ActivityFormData>({
     defaultValues: {
       name: "",
@@ -49,10 +53,27 @@ const CreateActivity = () => {
       target: "",
     },
   });
-  
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (max 2MB) and type
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "Image size must be less than 2MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Error",
+          description: "Please upload an image file (PNG, JPG)",
+          variant: "destructive",
+        });
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -60,34 +81,121 @@ const CreateActivity = () => {
       reader.readAsDataURL(file);
     }
   };
-  
-  const onSubmit = (data: ActivityFormData) => {
-    // In a real application, this would be sent to a backend API
-    console.log("Form submitted:", data);
-    
-    toast({
-      title: "Activity Submitted",
-      description: "Your activity has been submitted for approval.",
-    });
-    
-    // Redirect to a success page or activity list
-    setTimeout(() => {
-      navigate("/fundraisers");
-    }, 1500);
+
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    try {
+      // Step 1: Request a signature from the backend
+      const timestamp = Math.round(new Date().getTime() / 1000).toString();
+      const signatureResponse = await fetch("http://localhost:8080/api/cloudinary/signature", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ timestamp }),
+      });
+
+      if (!signatureResponse.ok) {
+        throw new Error("Failed to get Cloudinary signature");
+      }
+
+      const { signature, timestamp: returnedTimestamp } = await signatureResponse.json();
+
+      // Step 2: Upload the image to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", import.meta.env.VITE_CLOUDINARY_API_KEY);
+      formData.append("timestamp", returnedTimestamp);
+      formData.append("signature", signature);
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload image to Cloudinary");
+      }
+
+      const data = await uploadResponse.json();
+      return data.secure_url; // Return the secure URL
+    } catch (error) {
+      throw new Error("Cloudinary upload failed: " + (error as Error).message);
+    }
   };
-  
+
+  const onSubmit = async (data: ActivityFormData) => {
+    setIsSubmitting(true);
+
+    try {
+      let imageUrl = "";
+      if (data.image && data.image[0]) {
+        imageUrl = await uploadToCloudinary(data.image[0]);
+      }
+
+      // Map form data to ActivityDTO
+      const activityDTO = {
+        title: data.name,
+        description: data.purpose,
+        goalAmount: data.type === "fundraising" ? parseFloat(data.target) : 0,
+        amountRaised: 0,
+        image: imageUrl || "https://www.whatdowedoallday.com/wp-content/uploads/2013/11/charity-fb.jpg",
+        activityType: data.type === "fundraising" ? "Fundraiser" : "Donation",
+        startDate: data.dateStart + "T00:00:00",
+        endDate: data.dateEnd + "T23:59:59",
+        organizerId: localStorage.getItem("userId") || "u3",
+        location: data.location,
+        itemTypes: data.type === "donation" ? data.itemTypes : "",
+      };
+
+      // Send POST request to backend
+      const response = await fetch("http://localhost:8080/api/activities", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(activityDTO),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create activity");
+      }
+
+      toast({
+        title: "Activity Submitted",
+        description: "Your activity has been submitted for approval.",
+      });
+
+      setTimeout(() => {
+        navigate("/fundraisers");
+      }, 1500);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create activity. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navigation />
-      
       <div className="container py-8">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">Create a Fundraising/Donation Activity</h1>
           <p className="text-muted-foreground mb-6">
-            Fill out this form to start a new fundraising or donation activity for your school. 
+            Fill out this form to start a new fundraising or donation activity for your school.
             All activities require approval before being published.
           </p>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Activity Name */}
@@ -108,7 +216,7 @@ const CreateActivity = () => {
                   </FormItem>
                 )}
               />
-              
+
               {/* Activity Type */}
               <FormField
                 control={form.control}
@@ -141,7 +249,7 @@ const CreateActivity = () => {
                   </FormItem>
                 )}
               />
-              
+
               {/* Purpose */}
               <FormField
                 control={form.control}
@@ -151,10 +259,10 @@ const CreateActivity = () => {
                   <FormItem>
                     <FormLabel>Purpose</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Describe what this activity is for and who it will benefit" 
+                      <Textarea
+                        placeholder="Describe what this activity is for and who it will benefit"
                         className="min-h-32"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormDescription>
@@ -164,7 +272,7 @@ const CreateActivity = () => {
                   </FormItem>
                 )}
               />
-              
+
               {/* Date Range */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -177,27 +285,27 @@ const CreateActivity = () => {
                       <FormControl>
                         <div className="relative">
                           <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="date" 
-                            className="pl-10" 
-                            {...field} 
-                          />
+                          <Input type="date" className="pl-10" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="dateEnd"
-                  rules={{ 
+                  rules={{
                     required: "End date is required",
-                    validate: value => {
+                    validate: (value) => {
                       const start = form.getValues("dateStart");
-                      return !start || new Date(value) >= new Date(start) || "End date must be after start date";
-                    }  
+                      return (
+                        !start ||
+                        new Date(value) >= new Date(start) ||
+                        "End date must be after start date"
+                      );
+                    },
                   }}
                   render={({ field }) => (
                     <FormItem>
@@ -205,11 +313,7 @@ const CreateActivity = () => {
                       <FormControl>
                         <div className="relative">
                           <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="date" 
-                            className="pl-10" 
-                            {...field} 
-                          />
+                          <Input type="date" className="pl-10" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -217,7 +321,7 @@ const CreateActivity = () => {
                   )}
                 />
               </div>
-              
+
               {/* Activity Image */}
               <FormField
                 control={form.control}
@@ -226,12 +330,32 @@ const CreateActivity = () => {
                   <FormItem>
                     <FormLabel>Activity Image</FormLabel>
                     <FormControl>
-                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+                      <div
+                        className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 transition-colors ${
+                          isDragging ? "border-blue-500 bg-blue-50" : ""
+                        }`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          const files = e.dataTransfer.files;
+                          if (files && files.length > 0) {
+                            onChange(files);
+                            handleImageChange({
+                              target: { files },
+                            } as React.ChangeEvent<HTMLInputElement>);
+                          }
+                        }}
+                      >
                         {imagePreview ? (
                           <div className="mb-4">
-                            <img 
-                              src={imagePreview} 
-                              alt="Preview" 
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
                               className="max-h-48 rounded-md"
                             />
                           </div>
@@ -242,13 +366,13 @@ const CreateActivity = () => {
                               Click to upload or drag and drop
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              SVG, PNG, JPG (max. 2MB)
+                              PNG, JPG (max. 2MB)
                             </p>
                           </div>
                         )}
                         <Input
                           type="file"
-                          accept="image/*"
+                          accept="image/png,image/jpeg"
                           className={imagePreview ? "" : "sr-only"}
                           onChange={(e) => {
                             if (e.target.files) {
@@ -267,7 +391,7 @@ const CreateActivity = () => {
                   </FormItem>
                 )}
               />
-              
+
               {/* Location */}
               <FormField
                 control={form.control}
@@ -286,7 +410,7 @@ const CreateActivity = () => {
                   </FormItem>
                 )}
               />
-              
+
               {/* Item Types (for donation) or Fundraising Target (for fundraising) */}
               {form.watch("type") === "donation" ? (
                 <FormField
@@ -325,9 +449,11 @@ const CreateActivity = () => {
                   )}
                 />
               )}
-              
+
               <div className="pt-4">
-                <Button type="submit" className="w-full">Submit Activity for Review</Button>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Submit Activity for Review"}
+                </Button>
                 <p className="text-xs text-muted-foreground text-center mt-2">
                   Your activity will be reviewed by an administrator before being published
                 </p>
@@ -336,7 +462,6 @@ const CreateActivity = () => {
           </Form>
         </div>
       </div>
-      
       <Footer />
     </div>
   );

@@ -67,7 +67,7 @@ const AdminItems = () => {
     const searchMatch = 
       post.postId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.item.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Type filter
@@ -98,8 +98,6 @@ const AdminItems = () => {
         return "For Sale";
       case "Exchange":
         return "For Exchange";
-      case "Donation":
-        return "Free Donation";
     }
   };
 
@@ -139,9 +137,9 @@ const AdminItems = () => {
         const payload = {
           itemName: updatedPost.title,
           description: updatedPost.description,
-          sellerId: updatedPost.seller.userId,
+          sellerId: updatedPost.item.owner.userId,
           categoryId: updatedPost.item.category.categoryId,
-          price: updatedPost.item.price,
+          price: updatedPost.price,
           imageUrl: updatedPost.item.imageUrl,
           type: updatedPost.type === "Liquidation" ? "Liquidation" : "Exchange",
           status: "Approved",
@@ -182,9 +180,9 @@ const AdminItems = () => {
         const payload = {
           itemName: updatedPost.title,
           description: updatedPost.description,
-          sellerId: updatedPost.seller.userId,
+          sellerId: updatedPost.item.owner.userId,
           categoryId: updatedPost.item.category.categoryId,
-          price: updatedPost.item.price,
+          price: updatedPost.price,
           imageUrl: updatedPost.item.imageUrl,
           type: updatedPost.type === "Liquidation" ? "Liquidation" : "Exchange",
           status: "Rejected",
@@ -233,7 +231,7 @@ const AdminItems = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input 
-                    placeholder="Search by ID, title, or seller..." 
+                    placeholder="Search by ID, title, or item.owner..." 
                     className="pl-9"
                     value={searchTerm}
                     onChange={handleSearch}
@@ -307,8 +305,8 @@ const AdminItems = () => {
                             </div>
                             <div>
                               <div className="font-medium truncate max-w-[200px]">{post.title}</div>
-                              {post.type === "Liquidation" && post.item.price && (
-                                <div className="text-xs text-muted-foreground">${post.item.price.toFixed(2)}</div>
+                              {post.type === "Liquidation" && post.price && (
+                                <div className="text-xs text-muted-foreground">${post.price.toFixed(2)}</div>
                               )}
                             </div>
                           </div>
@@ -320,7 +318,7 @@ const AdminItems = () => {
                           </div>
                         </TableCell>
                         <TableCell>{post.item.category.name}</TableCell>
-                        <TableCell>{post.seller.name}</TableCell>
+                        <TableCell>{post.item.owner.name}</TableCell>
                         <TableCell>
                           {post.updatedAt ? format(new Date(post.updatedAt), "yyyy-MM-dd HH:mm:ss") : "N/A"}
                         </TableCell>
@@ -442,7 +440,7 @@ const AdminItems = () => {
                 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Price</p>
-                  <p>{selectedPost.type === "Liquidation" && selectedPost.item.price ? `$${selectedPost.item.price.toFixed(2)}` : "N/A"}</p>
+                  <p>{selectedPost.type === "Liquidation" && selectedPost.price ? `$${selectedPost.price.toFixed(2)}` : "N/A"}</p>
                 </div>
                 
                 <div>
@@ -452,7 +450,7 @@ const AdminItems = () => {
                 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Seller</p>
-                  <p>{selectedPost.seller.name}</p>
+                  <p>{selectedPost.item.owner.name}</p>
                 </div>
                 
                 <div>

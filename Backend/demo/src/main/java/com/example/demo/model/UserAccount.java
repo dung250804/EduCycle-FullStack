@@ -47,7 +47,9 @@ import java.util.stream.Collectors;
         @Column(nullable = false)
         private UserStatus status = UserStatus.Active;
 
+        @Column(name = "className")
         private String className;
+        @Column(name = "thClass")
         private String thClass;
         private String avatar;
 
