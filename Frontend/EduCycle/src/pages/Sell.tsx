@@ -168,7 +168,7 @@ const Sell = () => {
 
     // Prepare the payload as a JSON object
     const payload = {
-      itemName: formData.title,
+      title: formData.title,
       description: formData.description,
       sellerId: formData.owner,
       categoryId: formData.category,
@@ -179,7 +179,7 @@ const Sell = () => {
       state: "Pending",
     };
     console.log("Payload:", JSON.stringify(payload, null, 2));
-    const response = await fetch("http://localhost:8080/api/posts", {
+    const response = await fetch("http://localhost:8080/api/posts", { 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

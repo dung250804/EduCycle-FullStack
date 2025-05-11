@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 
 @Data
 public class PostDTO {
-    private String itemName;
+    private String title;
     private String description;
     private String imageUrl;
     private String sellerId;

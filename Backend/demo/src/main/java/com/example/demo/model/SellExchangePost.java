@@ -14,14 +14,25 @@ import java.time.LocalDateTime;
 @Data
 public class SellExchangePost {
     @Id
+    @Column(name = "post_id")
     private String postId;
+
+    @ManyToOne
+    @JoinColumn(name = "seller_id", nullable = false)
+    private UserAccount seller;
 
     @ManyToOne
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
-    @Column(precision = 10, scale = 2, nullable = true)
+    @Column(nullable = false)
+    private String title;
+
+    @Column(precision = 10, scale = 2, nullable = false) // Price is NOT NULL in schema
     private BigDecimal price;
+
+    @Column(nullable = false)
+    private String description; // Add description field
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -44,4 +55,3 @@ public class SellExchangePost {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
-

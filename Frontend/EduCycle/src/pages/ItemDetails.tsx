@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -6,7 +5,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeftRight, DollarSign, HandHeart, MessageCircle, Flag } from "lucide-react";
+import { ArrowLeftRight, DollarSign, MessageCircle, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ExchangeRequestDialog from "@/components/ExchangeRequestDialog";
 import type { Post } from "@/types/user";
@@ -14,6 +13,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const ItemDetails = () => {
   const [post, setPost] = useState<Post | null>(null);
+  const { toast } = useToast();
+  const [showExchangeDialog, setShowExchangeDialog] = useState(false);
+  const { id } = useParams<{ id: string }>();
+
   useEffect(() => {
     const fetchData = async () => {
       const postId = localStorage.getItem("postId");
@@ -26,7 +29,7 @@ const ItemDetails = () => {
           },
         });
 
-      if (postRes.ok) {
+        if (postRes.ok) {
           const postData = await postRes.json();
           setPost(postData);
         } else {
@@ -34,28 +37,83 @@ const ItemDetails = () => {
         }
       } catch (err) {
         console.error("Fetch error:", err);
-      } 
+      }
     };
 
     fetchData();
   }, []);
-  const { id } = useParams<{ id: string }>();
-  const { toast } = useToast();
-  const [showExchangeDialog, setShowExchangeDialog] = useState(false);
+
   if (!post) {
-    return <div>Loading...</div>; // Hoặc return null nếu bạn muốn giữ trắng
+    return <div>Loading...</div>;
   }
-  const handleBuyNow = () => {
-    toast({
-      title: "Purchase initiated",
-      description: "You are being redirected to complete your purchase.",
-    });
+
+  const handleBuyNow = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/transactions/create?postId=${post.postId}&userId=${localStorage.getItem("userId")}&type=Liquidation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: "Purchase initiated",
+          description: "Your transaction has been created successfully.",
+        });
+      } else {
+        throw new Error("Failed to create transaction");
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to initiate purchase. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Transaction error:", err);
+    }
+  };
+
+  const handleRequestExchange = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/transactions/create?postId=${post.postId}&userId=${localStorage.getItem("userId")}&type=Exchange`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: "Exchange requested",
+          description: "Your exchange request has been submitted.",
+        });
+        setShowExchangeDialog(false);
+      } else {
+        throw new Error("Failed to create transaction");
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to request exchange. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Transaction error:", err);
+    }
   };
 
   const handleContactSeller = () => {
     toast({
       title: "Message sent",
-      description: `Your message has been sent to ${post.seller.name}.`,
+      description: `Your message has been sent to ${post.item.owner.name}.`,
     });
   };
 
@@ -63,13 +121,6 @@ const ItemDetails = () => {
     toast({
       title: "Report submitted",
       description: "Thank you for helping keep EduCycle safe.",
-    });
-  };
-
-  const handleRequestDonation = () => {
-    toast({
-      title: "Request submitted",
-      description: "Your request for this donation has been submitted.",
     });
   };
 
@@ -105,9 +156,9 @@ const ItemDetails = () => {
         return "bg-gray-500 text-white";
     }
   };
+
   const isExchangeItem = post?.type === "Exchange";
   const isSaleItem = post?.type === "Liquidation";
-
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -118,8 +169,8 @@ const ItemDetails = () => {
           {/* Left column - Item image */}
           <div>
             <div className="rounded-lg overflow-hidden">
-              <img 
-                src={post?.item?.imageUrl || "/placeholder.svg"} 
+              <img
+                src={post?.item?.imageUrl || "/placeholder.svg"}
                 alt={post?.title}
                 className="w-full h-auto object-cover"
               />
@@ -160,12 +211,12 @@ const ItemDetails = () => {
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={post.seller.avatar} alt={post.seller.name} />
-                      <AvatarFallback>{post.seller.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={post.item.owner.avatar} alt={post.item.owner.name} />
+                      <AvatarFallback>{post.item.owner.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </div>
                   <div>
-                    <h3 className="font-medium">{post.seller.name}</h3>
+                    <h3 className="font-medium">{post.item.owner.name}</h3>
                     <p className="text-sm text-muted-foreground">Seller</p>
                   </div>
                 </div>
@@ -209,9 +260,10 @@ const ItemDetails = () => {
       <ExchangeRequestDialog
         isOpen={showExchangeDialog}
         onClose={() => setShowExchangeDialog(false)}
-        recipientId={post.seller.userId}
+        recipientId={post.item.owner.userId}
         itemId={post.postId}
         itemName={post.title}
+        onSubmit={handleRequestExchange}
       />
     </div>
   );

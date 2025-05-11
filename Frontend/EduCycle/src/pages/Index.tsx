@@ -4,29 +4,55 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import ItemCard from "@/components/ItemCard";
 import FundraiserCard from "@/components/FundraiserCard";
-import { mockFundraisers, categories } from "@/data/mockData";
+import { categories } from "@/data/mockData";
 import { Link } from "react-router-dom";
 import { Folder, ArrowLeftRight, HandHeart, DollarSign } from "lucide-react";
 import type { Post } from "@/types/user";
-import { set } from "date-fns";
+
+interface Item {
+  itemName: string;
+  description: string;
+  imageUrl: string;
+}
+
+interface PostActivity {
+  postId: string;
+  item: Item;
+  price?: number;
+}
+
+interface Activity {
+  activityId: string;
+  title: string;
+  description: string;
+  goalAmount: number;
+  amountRaised: number;
+  image: string;
+  organizerId: string;
+  activityType: "Donation" | "Fundraiser";
+  endDate: string;
+  posts?: PostActivity[];
+  organizer: { name: string };
+  participants: number;
+}
 
 const Index = () => {
   const [featuredItems, setFeaturedItems] = useState<Post[]>([]);
-  const featuredFundraisers = mockFundraisers.slice(0, 2);
+  const [featuredFundraisers, setFeaturedFundraisers] = useState<Activity[]>([]);
+
+  const slicedFeaturedFundraisers = featuredFundraisers.slice(0, 2);
   const slicedFeaturedItems = featuredItems.slice(0, 3);
-  
+
   useEffect(() => {
     const fetchData = async () => {
-
-
       try {
-        const postRes = await fetch("http://localhost:8080/api/posts/status/Approved  ", {
+        // Fetch posts
+        const postRes = await fetch("http://localhost:8080/api/posts/status/Approved", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("jwt")}`,
           },
         });
-
 
         if (postRes.ok) {
           const postData = await postRes.json();
@@ -34,16 +60,48 @@ const Index = () => {
         } else {
           console.error("Post Response Status:", postRes.status, postRes.statusText);
         }
+
+        // Fetch activities
+        const activityRes = await fetch("http://localhost:8080/api/activities", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+          },
+        });
+
+        if (activityRes.ok) {
+          const activityData = await activityRes.json();
+          // Map backend Activity data to frontend Activity interface
+          const formattedActivities: Activity[] = activityData.map((activity: any) => ({
+            activityId: activity.id,
+            title: activity.title,
+            description: activity.description,
+            goalAmount: activity.goalAmount,
+            amountRaised: activity.amountRaised,
+            image: activity.image,
+            organizerId: activity.organizerId,
+            activityType: activity.activityType,
+            endDate: activity.endDate,
+            posts: activity.posts || [],
+            organizer: activity.organizer ? { name: activity.organizer.name || "Unknown" } : { name: "Unknown" },
+            participants: activity.participants || 0,
+          }));
+          setFeaturedFundraisers(formattedActivities);
+        } else {
+          console.error("Activity Response Status:", activityRes.status, activityRes.statusText);
+        }
       } catch (err) {
         console.error("Fetch error:", err);
       }
     };
 
     fetchData();
-  },[]);
-  return <div className="flex flex-col min-h-screen">
+  }, []);
+
+  return (
+    <div className="flex flex-col min-h-screen">
       <Navigation />
-      
+
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-educycle-green/90 to-educycle-blue/90 text-white py-16 md:py-24">
         <div className="container">
@@ -69,7 +127,7 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       {/* How It Works */}
       <section className="py-16 bg-gray-50">
         <div className="container">
@@ -105,7 +163,7 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Featured Items */}
       <section className="py-16">
         <div className="container">
@@ -116,26 +174,34 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {slicedFeaturedItems.map(post => <ItemCard key={post.postId} {...post} />)}
+            {slicedFeaturedItems.map((post) => (
+              <ItemCard key={post.postId} {...post} />
+            ))}
           </div>
         </div>
       </section>
-      
+
       {/* Categories Section */}
       <section className="py-16 bg-gray-50">
         <div className="container">
           <h2 className="text-2xl font-bold mb-8">Browse by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {categories.map(category => <Link to={`/browse?category=${category.name}`} key={category.id} className="bg-white p-6 rounded-lg shadow-sm text-center hover:shadow-md transition-shadow">
+            {categories.map((category) => (
+              <Link
+                to={`/browse?category=${category.name}`}
+                key={category.id}
+                className="bg-white p-6 rounded-lg shadow-sm text-center hover:shadow-md transition-shadow"
+              >
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary mb-3">
                   <Folder className="h-5 w-5" />
                 </div>
                 <h3 className="font-medium">{category.name}</h3>
-              </Link>)}
+              </Link>
+            ))}
           </div>
         </div>
       </section>
-      
+
       {/* Featured Fundraisers */}
       <section className="py-16">
         <div className="container">
@@ -146,20 +212,25 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {featuredFundraisers.map(fundraiser => (
+            {slicedFeaturedFundraisers.map((fundraiser) => (
               <FundraiserCard
-                organizer={""}
-                participants={0}
-                activityType={undefined}
-                key={fundraiser.id}
-                {...fundraiser}
+                key={fundraiser.activityId}
+                id={fundraiser.activityId} // Changed from activityId to id to match FundraiserCardProps
+                title={fundraiser.title}
+                description={fundraiser.description}
+                goalAmount={fundraiser.goalAmount}
+                amountRaised={fundraiser.amountRaised}
+                image={fundraiser.image}
+                organizer={fundraiser.organizer.name} // Pass organizer.name as a string
                 endDate={new Date(fundraiser.endDate)}
+                participants={fundraiser.participants}
+                activityType={fundraiser.activityType}
               />
             ))}
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
       <section className="py-16 bg-educycle-blue/10">
         <div className="container text-center">
@@ -181,8 +252,10 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;

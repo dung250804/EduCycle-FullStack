@@ -37,17 +37,24 @@ public class SellExchangePostService {
         // Fetch related entities
         String postId = UUID.randomUUID().toString();
 
+        // Fetch the seller (UserAccount)
+        UserAccount seller = userAccountRepository.findById(postDTO.getSellerId())
+                .orElseThrow(() -> new EntityNotFoundException("Seller not found with ID: " + postDTO.getSellerId()));
+
         Item item = itemService.createItem(postDTO);
 
         // Map DTO to Entity
         SellExchangePost post = new SellExchangePost();
         post.setPostId(postId);
         post.setPrice(postDTO.getPrice());
+        post.setTitle(postDTO.getTitle());
+        post.setDescription(postDTO.getDescription());
         post.setType(postDTO.getType().equals("Liquidation") ? PostType.Liquidation : PostType.Exchange);
         post.setProductType(item.getCategory().getName());
         post.setStatus(PostStatusType.Pending);
         post.setState(PostStateType.Pending);
         post.setItem(item);
+        post.setSeller(seller); // Set the seller
         post.setCreatedAt(LocalDateTime.now());
         post.setUpdatedAt(LocalDateTime.now());
 
