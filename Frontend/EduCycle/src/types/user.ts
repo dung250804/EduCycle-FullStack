@@ -32,11 +32,11 @@ export interface Post {
       name: string; // Matches category_name (VARCHAR)
       description: string; // Matches category_description (VARCHAR)
     };
+    price: number;
     imageUrl: string; // Matches item_image (VARCHAR)
   };
   title: string;
   description: string;
-  price: number;
   type: 'Liquidation' | 'Exchange';
   status: string;
   createdAt: string;
@@ -97,4 +97,5 @@ export interface ItemToBackend {
   owner_id: string;
   category_id: string;
   created_at: string;
+   price: number;
 }

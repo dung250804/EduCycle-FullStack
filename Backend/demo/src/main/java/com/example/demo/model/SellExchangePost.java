@@ -17,20 +17,10 @@ public class SellExchangePost {
     private String postId;
 
     @ManyToOne
-    @JoinColumn(name = "seller_id", nullable = false)
-    private UserAccount seller;
-
-    @ManyToOne
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
-    @Column(nullable = false)
-    private String title;
-
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String description;
-
-    @Column(precision = 10, scale = 2, nullable = false)
+    @Column(precision = 10, scale = 2, nullable = true)
     private BigDecimal price;
 
     @Enumerated(EnumType.STRING)

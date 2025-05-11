@@ -1,7 +1,7 @@
 package com.example.demo.enumpack;
 
 public enum PostType {
-    Liquidation, Exchange;
+    Liquidation, Exchange, Fundraiser;
     public static PostType fromString(String state) {
         try {
             return PostType.valueOf(state);

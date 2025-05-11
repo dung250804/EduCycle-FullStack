@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { HandHeart, ShoppingCart } from "lucide-react";
-import { FundraiserType } from "@/types/user";
+import { ActivityType } from "@/types/user";
 
 export interface FundraiserCardProps {
   id: string;
@@ -17,29 +17,29 @@ export interface FundraiserCardProps {
   organizer: string;
   endDate: Date;
   participants: number;
-  fundraiserType: FundraiserType;
+  activityType: ActivityType;
 }
 
-const FundraiserCard = ({ id, title, description, goalAmount, amountRaised, image, organizer, endDate, fundraiserType }: FundraiserCardProps) => {
+const FundraiserCard = ({ id, title, description, goalAmount, amountRaised, image, organizer, endDate, activityType }: FundraiserCardProps) => {
   const progress = Math.min((amountRaised / goalAmount) * 100, 100);
   const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   const getTypeIcon = () => {
-    return fundraiserType === "ItemDonation" ? 
+    return activityType === "Donation" ? 
       <HandHeart className="h-4 w-4" /> : 
       <ShoppingCart className="h-4 w-4" />;
   };
 
   const getTypeColor = () => {
-    return fundraiserType === "ItemDonation" ? 
+    return activityType === "Donation" ? 
       "bg-educycle-green text-white" : 
       "bg-educycle-blue text-white";
   };
 
   const getTypeText = () => {
-    return fundraiserType === "ItemDonation" ? 
-      "Item Donation" : 
-      "Purchase Items";
+    return activityType === "Donation" ? 
+      "Donation" : 
+      "Fundraiser";
   };
 
   return (
@@ -69,7 +69,7 @@ const FundraiserCard = ({ id, title, description, goalAmount, amountRaised, imag
       </CardHeader>
       <CardContent className="p-4 pt-2">
         <p className="line-clamp-2 text-sm text-muted-foreground mb-3">{description}</p>
-        {fundraiserType === "ItemSale" && (
+        {activityType === "Fundraiser" && (
           <>
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between mt-2 text-sm">
@@ -82,12 +82,13 @@ const FundraiserCard = ({ id, title, description, goalAmount, amountRaised, imag
       <CardFooter className="p-4 pt-0">
         <Link to={`/fundraisers/${id}`} className="w-full">
           <Button className="w-full">
-            {fundraiserType === "ItemDonation" ? "Donate Items" : "View Available Items"}
+            {activityType === "Donation" ? "Donate Items" : "View Available Items"}
           </Button>
         </Link>
       </CardFooter>
     </Card>
   );
 };
+
 
 export default FundraiserCard;

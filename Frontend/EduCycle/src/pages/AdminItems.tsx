@@ -141,7 +141,7 @@ const AdminItems = () => {
           description: updatedPost.description,
           sellerId: updatedPost.seller.userId,
           categoryId: updatedPost.item.category.categoryId,
-          price: updatedPost.price,
+          price: updatedPost.item.price,
           imageUrl: updatedPost.item.imageUrl,
           type: updatedPost.type === "Liquidation" ? "Liquidation" : "Exchange",
           status: "Approved",
@@ -184,7 +184,7 @@ const AdminItems = () => {
           description: updatedPost.description,
           sellerId: updatedPost.seller.userId,
           categoryId: updatedPost.item.category.categoryId,
-          price: updatedPost.price,
+          price: updatedPost.item.price,
           imageUrl: updatedPost.item.imageUrl,
           type: updatedPost.type === "Liquidation" ? "Liquidation" : "Exchange",
           status: "Rejected",
@@ -307,8 +307,8 @@ const AdminItems = () => {
                             </div>
                             <div>
                               <div className="font-medium truncate max-w-[200px]">{post.title}</div>
-                              {post.type === "Liquidation" && post.price && (
-                                <div className="text-xs text-muted-foreground">${post.price.toFixed(2)}</div>
+                              {post.type === "Liquidation" && post.item.price && (
+                                <div className="text-xs text-muted-foreground">${post.item.price.toFixed(2)}</div>
                               )}
                             </div>
                           </div>
@@ -442,7 +442,7 @@ const AdminItems = () => {
                 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Price</p>
-                  <p>{selectedPost.type === "Liquidation" && selectedPost.price ? `$${selectedPost.price.toFixed(2)}` : "N/A"}</p>
+                  <p>{selectedPost.type === "Liquidation" && selectedPost.item.price ? `$${selectedPost.item.price.toFixed(2)}` : "N/A"}</p>
                 </div>
                 
                 <div>

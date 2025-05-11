@@ -6,31 +6,33 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "Activities")
 @Data
 public class Activity {
     @Id
+    @Column(name = "activity_id", length = 36)
     private String activityId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "organizer_id", nullable = false)
     private UserAccount organizer;
 
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(name = "description", nullable = false)
     private String description;
 
-    @Column(name = "goal_amount", precision = 10, scale = 2, nullable = false)
+    @Column(name = "goal_amount", nullable = false)
     private BigDecimal goalAmount;
 
-    @Column(name = "amount_raised", precision = 10, scale = 2, nullable = false)
-    private BigDecimal amountRaised = BigDecimal.ZERO;
+    @Column(name = "amount_raised", nullable = false)
+    private BigDecimal amountRaised;
 
-    @Column(nullable = false)
+    @Column(name = "image", nullable = false)
     private String image;
 
     @Enumerated(EnumType.STRING)
@@ -48,5 +50,12 @@ public class Activity {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-}
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "Activity_Post",
+            joinColumns = @JoinColumn(name = "activity_id"),
+            inverseJoinColumns = @JoinColumn(name = "post_id")
+    )
+    private Set<SellExchangePost> posts;
+}

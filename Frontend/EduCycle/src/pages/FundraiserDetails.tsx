@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { mockFundraisers, mockItems } from "@/data/mockData";
 import ItemCard from "@/components/ItemCard";
 import {
   Dialog,
@@ -30,6 +29,36 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+interface Item {
+  itemName: string;
+  description: string;
+  imageUrl: string;
+}
+
+interface Post {
+  postId: string;
+  title: string;  
+  item: Item
+  price?: number; // Added for ItemSale
+}
+
+interface Activity {
+  activityId: string;
+  title: string;
+  description: string;
+  goalAmount: number;
+  amountRaised: number;
+  image: string;
+  organizerId: string;
+  activityType: "Donation" | "Fundraiser";
+  endDate: string;
+  posts?: Post[];
+  organizer: { name: string };
+  participants: number;
+}
+
+export type ActivityType = "Donation" | "Fundraiser";
+
 const FundraiserDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -38,11 +67,48 @@ const FundraiserDetails = () => {
   const [donationCode, setDonationCode] = useState("");
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<Activity | null>(null);
+  const [quantity, setQuantity] = useState(1);
   
-  // Find the fundraiser with the matching ID
-  const fundraiser = mockFundraisers.find(f => f.id === id);
+  useEffect(() => {
+    const fetchActivity = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        if (!id) {
+          throw new Error('No activity ID found in localStorage');
+        }
+
+        // Make API call
+        const response = await fetch(`http://localhost:8080/api/activities/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            // Add any necessary authorization headers
+            // 'Authorization': `Bearer ${yourToken}`
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch activity');
+        }
+
+        const data: Activity = await response.json();
+        setActivity(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchActivity();
+  }, [id]);
   
-  if (!fundraiser) {
+  if (!activity) {
     return (
       <div className="flex flex-col min-h-screen">
         <Navigation />
@@ -58,11 +124,11 @@ const FundraiserDetails = () => {
     );
   }
   
-  const percentage = Math.min(100, Math.round((fundraiser.amountRaised / fundraiser.goalAmount) * 100));
+  const percentage = Math.min(100, Math.round((activity.amountRaised / activity.goalAmount) * 100));
   
   const handleSubmitDonation = () => {
     // Only for item donations
-    if (fundraiser.fundraiserType !== "ItemDonation") return;
+    if (activity.activityType !== "Donation") return;
     
     const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
     setDonationCode(randomCode);
@@ -79,23 +145,66 @@ const FundraiserDetails = () => {
     setShowPurchaseModal(true);
   };
 
-  const completePurchase = () => {
+  const completePurchase = async () => {
+  try {
+    // Calculate the total amount for this purchase
+    const purchaseAmount = selectedItem.price * quantity;
+
+    // Update amountRaised in the database
+    await updateAmountRaisedInDatabase(purchaseAmount);
+
+    // Update local activity state to reflect new amountRaised
+    setActivity((prev) =>
+      prev ? { ...prev, amountRaised: prev.amountRaised + purchaseAmount } : prev
+    );
+
+    // Show success toast
     toast({
       title: "Purchase successful!",
       description: `Thank you for purchasing ${selectedItem.title} and supporting this fundraiser.`,
     });
+
+    // Close the purchase modal
     setShowPurchaseModal(false);
-  };
+    setQuantity(1); // Reset quantity after purchase
+  } catch (error) {
+    console.error("Error completing purchase:", error);
+    toast({
+      title: "Error",
+      description: "Failed to complete purchase. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
+
+// Function to update amountRaised in the database
+const updateAmountRaisedInDatabase = async (purchaseAmount: number) => {
+  const response = await fetch(`http://localhost:8080/api/activities/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amountRaised: activity!.amountRaised + purchaseAmount, // Send new total
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update amountRaised in database");
+  }
+
+  return response.json();
+};
 
   const getFundraiserTypeIcon = () => {
-    return fundraiser.fundraiserType === "ItemDonation" ? 
+    return activity.activityType === "Donation" ? 
       <HandHeart className="h-5 w-5" /> : 
       <ShoppingCart className="h-5 w-5" />;
   };
 
   const getFundraiserTypeText = () => {
-    return fundraiser.fundraiserType === "ItemDonation" ? 
-      "Item Donation Fundraiser" : 
+    return activity.activityType === "Donation" ? 
+      "Post Donation Fundraiser" : 
       "Purchase Items Fundraiser";
   };
   
@@ -113,28 +222,28 @@ const FundraiserDetails = () => {
             
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-3xl font-bold">{fundraiser.title}</h1>
-                <Badge className={fundraiser.fundraiserType === "ItemDonation" ? "bg-educycle-green" : "bg-educycle-blue"}>
+                <h1 className="text-3xl font-bold">{activity.title}</h1>
+                <Badge className={activity.activityType === "Donation" ? "bg-educycle-green" : "bg-educycle-blue"}>
                   <span className="flex items-center gap-1 text-white">
                     {getFundraiserTypeIcon()}
                     {getFundraiserTypeText()}
                   </span>
                 </Badge>
               </div>
-              <p className="text-muted-foreground">Organized by {fundraiser.organizer}</p>
+              <p className="text-muted-foreground">Organized by {activity.organizer.name}</p>
             </div>
             
             <div className="mb-6">
               <img 
-                src={fundraiser.image} 
-                alt={fundraiser.title}
+                src={activity.image} 
+                alt={activity.title}
                 className="w-full h-64 object-cover rounded-lg"
               />
             </div>
             
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4">About This Fundraiser</h2>
-              <p className="mb-4">{fundraiser.description}</p>
+              <p className="mb-4">{activity.description}</p>
               <p>
                 This fundraiser aims to help our school community by raising funds for important resources. 
                 Your contribution, no matter how small, will make a significant impact.
@@ -142,24 +251,24 @@ const FundraiserDetails = () => {
             </div>
 
             {/* Display items for sale if this is an ItemSale fundraiser */}
-            {fundraiser.fundraiserType === "ItemSale" && fundraiser.items && fundraiser.items.length > 0 && (
+            {activity.activityType === "Fundraiser" && activity.posts && activity.posts.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-xl font-semibold mb-4">Items For Sale</h2>
                 <p className="mb-4">Purchase these items to support our fundraiser:</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {fundraiser.items.map((item) => (
-                    <div key={item.post_id} className="border rounded-lg p-4 flex gap-4">
+                  {activity.posts?.map((post) => (
+                    <div key={post.postId} className="border rounded-lg p-4 flex gap-4">
                       <img 
-                        src={item.image || "/placeholder.svg"} 
-                        alt={item.title} 
+                        src={post.item.imageUrl || "/placeholder.svg"} 
+                        alt={post.title} 
                         className="w-20 h-20 object-cover rounded-md"
                       />
                       <div className="flex-1">
-                        <h3 className="font-medium">{item.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                        <h3 className="font-medium">{post.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{post.item.description}</p>
                         <div className="flex justify-between items-center mt-2">
-                          <span className="font-bold">${item.price.toFixed(2)}</span>
-                          <Button size="sm" onClick={() => handlePurchaseItem(item)}>
+                          <span className="font-bold">${post.price.toFixed(2)}</span>
+                          <Button size="sm" onClick={() => handlePurchaseItem(post)}>
                             Buy Now
                           </Button>
                         </div>
@@ -176,7 +285,7 @@ const FundraiserDetails = () => {
                 <div>
                   <h3 className="font-medium">Dates</h3>
                   <p className="text-sm text-muted-foreground">
-                    {new Date().toLocaleDateString()} - {fundraiser.endDate.toLocaleDateString()}
+                    {new Date().toLocaleDateString()} - {activity.endDate}
                   </p>
                 </div>
               </div>
@@ -184,7 +293,7 @@ const FundraiserDetails = () => {
                 <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
                   <h3 className="font-medium">Participants</h3>
-                  <p className="text-sm text-muted-foreground">{fundraiser.participants} people have contributed</p>
+                  <p className="text-sm text-muted-foreground">{activity.participants} people have contributed</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -198,7 +307,7 @@ const FundraiserDetails = () => {
                 <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
                   <h3 className="font-medium">Status</h3>
-                  <p className="text-sm text-muted-foreground">Active - Accepting {fundraiser.fundraiserType === "ItemDonation" ? "donations" : "purchases"}</p>
+                  <p className="text-sm text-muted-foreground">Active - Accepting {activity.activityType === "Donation" ? "Donation" : "Fundraiser"}</p>
                 </div>
               </div>
             </div>
@@ -207,13 +316,13 @@ const FundraiserDetails = () => {
           {/* Right side - Progress and donation */}
           <div className="lg:w-96">
             <div className="border rounded-lg p-6 sticky top-6">
-              {fundraiser.fundraiserType === "ItemSale" ? (
+              {activity.activityType === "Fundraiser" ? (
                 <>
                   <h2 className="text-xl font-semibold mb-4">Fundraising Progress</h2>
                   <div className="mb-6">
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium">${fundraiser.amountRaised}</span>
-                      <span className="text-muted-foreground">Goal: ${fundraiser.goalAmount}</span>
+                      <span className="font-medium">${activity.amountRaised}</span>
+                      <span className="text-muted-foreground">Goal: ${activity.goalAmount}</span>
                     </div>
                     <Progress value={percentage} className="h-3" />
                     <p className="text-sm text-muted-foreground mt-2">{percentage}% of our goal</p>
@@ -227,11 +336,15 @@ const FundraiserDetails = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{fundraiser.participants} supporters</span>
+                    <span>{activity.participants} supporters</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{Math.ceil((fundraiser.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left</span>
+                    <span>
+                      {isNaN(new Date(activity.endDate).getTime())
+                        ? "Invalid date"
+                        : Math.ceil((new Date(activity.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left
+                    </span>
                   </div>
                 </div>
               </div>
@@ -239,7 +352,7 @@ const FundraiserDetails = () => {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button className="w-full mb-4">
-                    {fundraiser.fundraiserType === "ItemDonation" ? "Donate Items" : "View Available Items"}
+                    {activity.activityType === "Donation" ? "Donate Items" : "View Available Items"}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
@@ -247,17 +360,17 @@ const FundraiserDetails = () => {
                     <>
                       <DialogHeader>
                         <DialogTitle>
-                          {fundraiser.fundraiserType === "ItemDonation" ? "Donate Items" : "Available Items"}
+                          {activity.activityType === "Donation" ? "Donate Items" : "Available Items"}
                         </DialogTitle>
                         <DialogDescription>
-                          {fundraiser.fundraiserType === "ItemDonation" 
+                          {activity.activityType === "Donation" 
                             ? "Please provide details about the items you'd like to donate."
                             : "Select items to purchase and support this fundraiser."
                           }
                         </DialogDescription>
                       </DialogHeader>
                       
-                      {fundraiser.fundraiserType === "ItemDonation" ? (
+                      {activity.activityType === "Donation" ? (
                         <div className="space-y-4 py-4">
                           <div>
                             <label className="text-sm font-medium">Type of item(s) to donate</label>
@@ -285,19 +398,19 @@ const FundraiserDetails = () => {
                         </div>
                       ) : (
                         <div className="space-y-4 py-4">
-                          {fundraiser.items && fundraiser.items.map((item) => (
-                            <div key={item.post_id} className="flex items-center gap-4 p-4 border rounded-lg">
+                          {activity.posts && activity.posts.map((post) => (
+                            <div key={post.postId} className="flex items-center gap-4 p-4 border rounded-lg">
                               <img 
-                                src={item.image || "/placeholder.svg"} 
-                                alt={item.title} 
+                                src={post.item.imageUrl || "/placeholder.svg"} 
+                                alt={post.title} 
                                 className="w-20 h-20 object-cover rounded-md"
                               />
                               <div className="flex-1">
-                                <h3 className="font-medium">{item.title}</h3>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                <h3 className="font-medium">{post.title}</h3>
+                                <p className="text-sm text-muted-foreground">{post.item.description}</p>
                                 <div className="flex justify-between items-center mt-2">
-                                  <span className="font-bold">${item.price.toFixed(2)}</span>
-                                  <Button size="sm" onClick={() => handlePurchaseItem(item)}>
+                                  <span className="font-bold">${post.price.toFixed(2)}</span>
+                                  <Button size="sm" onClick={() => handlePurchaseItem(post)}>
                                     Purchase
                                   </Button>
                                 </div>
@@ -357,12 +470,12 @@ const FundraiserDetails = () => {
         </div>
       </div>
 
-      {/* Purchase Item Modal */}
+      {/* Purchase Post Modal */}
       {selectedItem && (
         <Dialog open={showPurchaseModal} onOpenChange={setShowPurchaseModal}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Purchase Item</DialogTitle>
+              <DialogTitle>Purchase Post</DialogTitle>
               <DialogDescription>
                 Complete your purchase to support this fundraiser.
               </DialogDescription>
@@ -370,7 +483,7 @@ const FundraiserDetails = () => {
             <div className="py-4">
               <div className="flex gap-4 mb-4">
                 <img 
-                  src={selectedItem.image || "/placeholder.svg"} 
+                  src={selectedItem.item.imageUrl || "/placeholder.svg"} 
                   alt={selectedItem.title} 
                   className="w-24 h-24 object-cover rounded-md"
                 />
@@ -398,6 +511,7 @@ const FundraiserDetails = () => {
                     min="1" 
                     defaultValue="1" 
                     className="mt-1"
+                    onChange={(e) => setQuantity(Number(e.target.value))}
                   />
                 </div>
                 
@@ -422,5 +536,6 @@ const FundraiserDetails = () => {
     </div>
   );
 };
+
 
 export default FundraiserDetails;

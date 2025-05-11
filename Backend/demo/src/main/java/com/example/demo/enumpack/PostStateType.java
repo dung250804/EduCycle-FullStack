@@ -1,7 +1,7 @@
 package com.example.demo.enumpack;
 
 public enum PostStateType {
-    Pending, SellerSent, BuyerSent, BothSent, SellerReceived, BuyerReceived, BothReceived;
+    Pending, SellerSent, BuyerSent, BothSent, SellerReceived, BuyerReceived, Completed;
 
     public static PostStateType fromString(String state) {
         try {

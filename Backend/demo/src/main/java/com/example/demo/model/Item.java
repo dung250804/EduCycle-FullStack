@@ -5,12 +5,12 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "items")
 @Data
-@Access(AccessType.FIELD) // Enforce field-based access to avoid getter/setter inference
 public class Item {
     @Id
     @Column(name = "item_id", length = 36)
@@ -35,5 +35,7 @@ public class Item {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+
     // Getters and setter
 }

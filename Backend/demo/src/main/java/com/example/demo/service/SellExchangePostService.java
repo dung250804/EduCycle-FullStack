@@ -35,8 +35,6 @@ public class SellExchangePostService {
     @Transactional
     public SellExchangePost createPost(PostDTO postDTO) {
         // Fetch related entities
-        UserAccount seller = userAccountRepository.findById(postDTO.getSellerId())
-                .orElseThrow(() -> new EntityNotFoundException("Seller not found with ID: " + postDTO.getSellerId()));
         String postId = UUID.randomUUID().toString();
 
         Item item = itemService.createItem(postDTO);
@@ -44,14 +42,11 @@ public class SellExchangePostService {
         // Map DTO to Entity
         SellExchangePost post = new SellExchangePost();
         post.setPostId(postId);
-        post.setTitle(postDTO.getItemName());
-        post.setDescription(postDTO.getDescription());
         post.setPrice(postDTO.getPrice());
         post.setType(postDTO.getType().equals("Liquidation") ? PostType.Liquidation : PostType.Exchange);
         post.setProductType(item.getCategory().getName());
         post.setStatus(PostStatusType.Pending);
         post.setState(PostStateType.Pending);
-        post.setSeller(seller);
         post.setItem(item);
         post.setCreatedAt(LocalDateTime.now());
         post.setUpdatedAt(LocalDateTime.now());
@@ -65,11 +60,11 @@ public class SellExchangePostService {
     }
 
     public List<SellExchangePost> getAllPosts() {
-        return postRepository.findAll();
+         return postRepository.findAll();
     }
 
     public List<SellExchangePost> getPostsBySellerId(String sellerId) {
-        return postRepository.findBySellerUserId(sellerId);
+        return null;//postRepository.findBySellerUserId(sellerId);
     }
 
     public List<SellExchangePost> getPostsByType(PostType type) {
@@ -94,8 +89,6 @@ public class SellExchangePostService {
 
         SellExchangePost existingPost = existingPostOpt.get();
 
-        existingPost.setTitle(updatedPost.getItemName());
-        existingPost.setDescription(updatedPost.getDescription());
         existingPost.setPrice(updatedPost.getPrice());
         existingPost.setStatus(PostStatusType.fromString(updatedPost.getStatus()));
         existingPost.setState(PostStateType.fromString(updatedPost.getState()));

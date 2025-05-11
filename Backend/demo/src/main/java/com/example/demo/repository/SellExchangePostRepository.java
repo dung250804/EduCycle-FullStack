@@ -11,7 +11,6 @@ import java.util.List;
 
 @Repository
 public interface SellExchangePostRepository extends JpaRepository<SellExchangePost, String> {
-    List<SellExchangePost> findBySellerUserId(String sellerId);
     List<SellExchangePost> findByType(PostType type);
     List<SellExchangePost> findByStatus(PostStatusType status);
     List<SellExchangePost> findByState(PostStateType status);
