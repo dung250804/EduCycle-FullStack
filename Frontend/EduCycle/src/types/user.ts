@@ -1,15 +1,17 @@
 // Interface for User, matching Users table
 export interface User {
-  userId: string; // Matches user_id (VARCHAR)
-  name: string;
-  email: string;
-  role: string; // As per frontend requirement
-  reputationScore: number; // Matches reputation_score
-  violationCount: number; // Matches violation_count
-  walletBalance: number; // Matches wallet_balance (DECIMAL)
-  rating: number; // Matches rating (DECIMAL)
-  status: "Active" | "Banned"; // Matches status
-  avatar: string; // Matches avatar
+  userId: string;              // Matches userId
+  name: string;                // Matches name
+  email: string;               // Matches email
+  roles: string[];             // Matches roles (List<String>)
+  className: string;           // Matches className
+  thClass: string;             // Matches thClass
+  reputationScore: number;     // Matches reputationScore (int)
+  violationCount: number;      // Matches violationCount (int)
+  walletBalance: number;       // Matches walletBalance (BigDecimal)
+  rating: number;              // Matches rating (BigDecimal)
+  status: string;              // Matches status
+  avatar: string;              // Matches avatar
 }
 
 // Type for ItemType, matching Sell_Exchange_Posts.type
@@ -26,6 +28,7 @@ export interface Post {
   item: {
     itemName: string; // Matches item_name (VARCHAR)
     category: {
+      categoryId: string; // Matches category_id (VARCHAR)
       name: string; // Matches category_name (VARCHAR)
       description: string; // Matches category_description (VARCHAR)
     };
@@ -38,6 +41,7 @@ export interface Post {
   status: string;
   createdAt: string;
   updatedAt: string;
+  state: string; // Matches state (VARCHAR)
 }
 
 // Type for ActivityType, matching Activities.activity_type

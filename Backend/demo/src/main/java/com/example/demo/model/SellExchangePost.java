@@ -1,6 +1,7 @@
 package com.example.demo.model;
 
-import com.example.demo.enumpack.PostStatus;
+import com.example.demo.enumpack.PostStateType;
+import com.example.demo.enumpack.PostStatusType;
 import com.example.demo.enumpack.PostType;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -41,7 +42,10 @@ public class SellExchangePost {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PostStatus status = PostStatus.Pending;
+    private PostStatusType status = PostStatusType.Pending;
+
+    @Column(nullable = false)
+    private PostStateType state = PostStateType.Pending;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

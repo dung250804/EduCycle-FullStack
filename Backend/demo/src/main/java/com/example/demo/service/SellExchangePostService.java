@@ -1,7 +1,8 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.PostDTO;
-import com.example.demo.enumpack.PostStatus;
+import com.example.demo.enumpack.PostStateType;
+import com.example.demo.enumpack.PostStatusType;
 import com.example.demo.enumpack.PostType;
 import com.example.demo.model.Item;
 import com.example.demo.model.SellExchangePost;
@@ -14,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,9 +49,12 @@ public class SellExchangePostService {
         post.setPrice(postDTO.getPrice());
         post.setType(postDTO.getType().equals("Liquidation") ? PostType.Liquidation : PostType.Exchange);
         post.setProductType(item.getCategory().getName());
-        post.setStatus(PostStatus.Pending);
+        post.setStatus(PostStatusType.Pending);
+        post.setState(PostStateType.Pending);
         post.setSeller(seller);
         post.setItem(item);
+        post.setCreatedAt(LocalDateTime.now());
+        post.setUpdatedAt(LocalDateTime.now());
 
         // Save the post
         return postRepository.save(post);
@@ -71,20 +76,42 @@ public class SellExchangePostService {
         return postRepository.findByType(type);
     }
 
-    public List<SellExchangePost> getPostsByStatus(PostStatus status) {
+    public List<SellExchangePost> getPostsByStatus(PostStatusType status) {
         return postRepository.findByStatus(status);
+    }
+
+    public List<SellExchangePost> getPostsByState(PostStateType state) {
+        return postRepository.findByState(state);
     }
 
     public List<SellExchangePost> getPostsByCategoryId(String categoryId) {
         return postRepository.findByItem_Category_CategoryId(categoryId);
     }
 
-    public SellExchangePost updatePost(SellExchangePost SellExchangePost) {
-        return postRepository.save(SellExchangePost);
+    public Optional<SellExchangePost> updatePost(String postId, PostDTO updatedPost) {
+        Optional<SellExchangePost> existingPostOpt = postRepository.findById(postId);
+        if (existingPostOpt.isEmpty()) return Optional.empty();
+
+        SellExchangePost existingPost = existingPostOpt.get();
+
+        existingPost.setTitle(updatedPost.getItemName());
+        existingPost.setDescription(updatedPost.getDescription());
+        existingPost.setPrice(updatedPost.getPrice());
+        existingPost.setStatus(PostStatusType.fromString(updatedPost.getStatus()));
+        existingPost.setState(PostStateType.fromString(updatedPost.getState()));
+        existingPost.setType(PostType.fromString(updatedPost.getType()));
+        existingPost.setUpdatedAt(LocalDateTime.now());
+
+        postRepository.save(existingPost);
+        return Optional.of(existingPost);
     }
 
-    public void deletePost(String postId) {
-        postRepository.deleteById(postId);
+    public boolean deletePost(String postId) {
+        Optional<SellExchangePost> existingPost = postRepository.findById(postId);
+        if (existingPost.isPresent()) {
+            postRepository.deleteById(postId);
+            return true;
+        }
+        return false;
     }
-    
 }

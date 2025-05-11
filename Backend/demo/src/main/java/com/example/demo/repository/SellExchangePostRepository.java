@@ -1,6 +1,7 @@
 package com.example.demo.repository;
 
-import com.example.demo.enumpack.PostStatus;
+import com.example.demo.enumpack.PostStateType;
+import com.example.demo.enumpack.PostStatusType;
 import com.example.demo.enumpack.PostType;
 import com.example.demo.model.SellExchangePost;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,7 @@ import java.util.List;
 public interface SellExchangePostRepository extends JpaRepository<SellExchangePost, String> {
     List<SellExchangePost> findBySellerUserId(String sellerId);
     List<SellExchangePost> findByType(PostType type);
-    List<SellExchangePost> findByStatus(PostStatus status);
+    List<SellExchangePost> findByStatus(PostStatusType status);
+    List<SellExchangePost> findByState(PostStateType status);
     List<SellExchangePost> findByItem_Category_CategoryId(String categoryId);
 }

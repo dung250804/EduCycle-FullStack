@@ -1,6 +1,8 @@
 package com.example.demo.model;
 
+import com.example.demo.enumpack.UserStatus;
 import jakarta.persistence.*;
+import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
@@ -9,12 +11,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "Users")
+@Data
 public class UserAccount implements UserDetails, Serializable {
     @Id
     private String userId;
@@ -44,13 +49,13 @@ public class UserAccount implements UserDetails, Serializable {
     @Column(nullable = false)
     private UserStatus status = UserStatus.Active;
 
+    private String className;
+    private String thClass;
     private String avatar;
 
-    @CreationTimestamp
-    private Timestamp createdAt;
+    private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    private Timestamp updatedAt;
+    private LocalDateTime updatedAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -156,22 +161,31 @@ public class UserAccount implements UserDetails, Serializable {
         this.avatar = avatar;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
+    public String getPrimaryRole() {
+        if (roles == null || roles.isEmpty()) {
+            return "user";
+        }
 
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
-    }
+        List<String> priorityOrder = List.of(
+                "Admin",
+                "Warehouse Manager",
+                "Approval Manager",
+                "Representative",
+                "Member"
+        );
 
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+        for (String priorityRole : priorityOrder) {
+            for (Role role : roles) {
+                if (priorityRole.equals(role.getRoleName())) {
+                    return priorityRole;
+                }
+            }
+        }
 
+        // Nếu không khớp vai trò nào trong danh sách ưu tiên
+        return "Member";
+    }
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
@@ -189,9 +203,7 @@ public class UserAccount implements UserDetails, Serializable {
         return this.email;
     }
 
-    public enum UserStatus {
-        Active, Banned
-    }
+
 }
 
 

@@ -174,7 +174,9 @@ const Sell = () => {
       categoryId: formData.category,
       ...(itemType === "sale" && { price: parseFloat(formData.price) }),
       ...(imageUrl && { imageUrl }),
-      type: itemType === "sale" ? "Liquidation" : "Exchange"
+      type: itemType === "sale" ? "Liquidation" : "Exchange",
+      status: "Pending",
+      state: "Pending",
     };
     console.log("Payload:", JSON.stringify(payload, null, 2));
     const response = await fetch("http://localhost:8080/api/posts", {

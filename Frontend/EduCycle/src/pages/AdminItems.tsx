@@ -19,13 +19,14 @@ import Footer from "@/components/Footer";
 import { Search, CheckCircle, XCircle, Image, DollarSign, ArrowLeftRight, HandHeart } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import { Post, ItemType } from "@/types/user";
+import { format } from "date-fns";
 
 const AdminItems = () => {
   const [adminPosts, setFeaturedItems] = useState<Post[]>([]);
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const postRes = await fetch("http://localhost:8080/api/posts/status/Pending  ", {
+        const postRes = await fetch("http://localhost:8080/api/posts  ", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("jwt")}`,
@@ -45,7 +46,7 @@ const AdminItems = () => {
     };
 
     fetchData();
-  });
+  }, []);
 
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,26 +122,91 @@ const AdminItems = () => {
     setDialogOpen(true);
   };
 
-  const executeAction = () => {
+  const executeAction = async (e: React.FormEvent) => {
     if (!selectedPost || !dialogAction) return;
-
+    
     // Implementation would connect to backend in a real app
     if (dialogAction === "approve") {
-      setFeaturedItems(adminPosts.map(post => 
-        post.postId === selectedPost.postId ? {...post, status: "approved" as const} : post
-      ));
-      toast({
-        title: "Item Approved",
-        description: `${selectedPost.title} has been approved and is now live.`
-      });
+      try {
+        setFeaturedItems(adminPosts.map(post => 
+          post.postId === selectedPost.postId ? {...post, status: "Approved" as const} : post
+        ));
+        const updatedPost = adminPosts.find(post => post.postId === selectedPost.postId);
+        toast({
+          title: "Item Approved",
+          description: `${selectedPost.title} has been approved and is now live.`
+        });
+        const payload = {
+          itemName: updatedPost.title,
+          description: updatedPost.description,
+          sellerId: updatedPost.seller.userId,
+          categoryId: updatedPost.item.category.categoryId,
+          price: updatedPost.price,
+          imageUrl: updatedPost.item.imageUrl,
+          type: updatedPost.type === "Liquidation" ? "Liquidation" : "Exchange",
+          status: "Approved",
+          state: updatedPost.state, 
+        };
+
+        const response = await fetch(`http://localhost:8080/api/posts/${updatedPost.postId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+    
+        if (!response.ok) {
+          throw new Error(`Failed to submit listing: ${response.statusText}`);
+        }
+    
+        toast({
+          title: "Listing submitted successfully!",
+          description: "Your item is now pending review and will be published soon.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit listing. Please try again.",
+          variant: "destructive",
+        });    
+      }
     } else if (dialogAction === "reject") {
       setFeaturedItems(adminPosts.map(post => 
-        post.postId === selectedPost.postId ? {...post, status: "rejected" as const} : post
+        post.postId === selectedPost.postId ? {...post, status: "Rejected" as const} : post
       ));
       toast({
         title: "Item Rejected",
         description: `${selectedPost.title} has been rejected.`
       });
+      try {
+        const updatedPost = adminPosts.find(post => post.postId === selectedPost.postId);
+        const payload = {
+          itemName: updatedPost.title,
+          description: updatedPost.description,
+          sellerId: updatedPost.seller.userId,
+          categoryId: updatedPost.item.category.categoryId,
+          price: updatedPost.price,
+          imageUrl: updatedPost.item.imageUrl,
+          type: updatedPost.type === "Liquidation" ? "Liquidation" : "Exchange",
+          status: "Rejected",
+          state: updatedPost.state, 
+        };
+
+        const response = await fetch(`http://localhost:8080/api/posts/${updatedPost.postId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+    
+        if (!response.ok) {
+          throw new Error(`Failed to submit listing: ${response.statusText}`);
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit listing. Please try again.",
+          variant: "destructive",
+        });    
+      }
     }
 
     setDialogOpen(false);
@@ -256,12 +322,12 @@ const AdminItems = () => {
                         <TableCell>{post.item.category.name}</TableCell>
                         <TableCell>{post.seller.name}</TableCell>
                         <TableCell>
-                          {new Date(post.updatedAt).toLocaleDateString()}
+                          {post.updatedAt ? format(new Date(post.updatedAt), "yyyy-MM-dd HH:mm:ss") : "N/A"}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex adminPosts-center px-2 py-1 rounded-full text-xs font-medium ${
-                            post.status === 'approved' ? 'bg-educycle-green/10 text-educycle-green' :
-                            post.status === 'pending' ? 'bg-educycle-yellow/10 text-educycle-yellow' :
+                            post.status === 'Approved' ? 'bg-educycle-green/10 text-educycle-green' :
+                            post.status === 'Pending' ? 'bg-educycle-yellow/10 text-educycle-yellow' :
                             'bg-destructive/10 text-destructive'
                           }`}>
                             {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
@@ -269,7 +335,7 @@ const AdminItems = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {post.status === "pending" && (
+                            {post.status === "Pending" && (
                               <>
                                 <Button 
                                   size="sm" 
@@ -323,13 +389,13 @@ const AdminItems = () => {
               <div className="border rounded-lg p-4">
                 <div className="text-lg font-medium">Pending Review</div>
                 <div className="text-3xl font-bold mt-1 text-educycle-yellow">
-                  {adminPosts.filter(post => post.status === 'pending').length}
+                  {adminPosts.filter(post => post.status === 'Pending').length}
                 </div>
               </div>
               <div className="border rounded-lg p-4">
                 <div className="text-lg font-medium">Active Listings</div>
                 <div className="text-3xl font-bold mt-1 text-educycle-green">
-                  {adminPosts.filter(post => post.status === 'approved').length}
+                  {adminPosts.filter(post => post.status === 'Approved').length}
                 </div>
               </div>
             </div>
