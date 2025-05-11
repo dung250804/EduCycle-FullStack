@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ interface ExchangeRequestDialogProps {
   recipientId: string;
   itemId: string;
   itemName: string;
+  onSubmit: (data: ExchangeFormValues) => Promise<void>; // Updated to accept form data
 }
 
 // Define schema for form validation
@@ -27,7 +27,7 @@ const exchangeFormSchema = z.object({
   name: z.string().min(1, "Item name is required"),
   category: z.string().min(1, "Please select a category"),
   description: z.string().optional(),
-  image: z.instanceof(File, { message: "Please upload an image" })
+  image: z.instanceof(File, { message: "Please upload an image" }),
 });
 
 type ExchangeFormValues = z.infer<typeof exchangeFormSchema>;
@@ -37,11 +37,12 @@ const ExchangeRequestDialog = ({
   onClose,
   recipientId,
   itemId,
-  itemName
+  itemName,
+  onSubmit,
 }: ExchangeRequestDialogProps) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
+
   // Initialize form with react-hook-form and zod validation
   const form = useForm<ExchangeFormValues>({
     resolver: zodResolver(exchangeFormSchema),
@@ -49,16 +50,16 @@ const ExchangeRequestDialog = ({
       name: "",
       description: "",
       category: "",
-    }
+    },
   });
-  
+
   const isSubmitting = form.formState.isSubmitting;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       form.setValue("image", file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -68,19 +69,19 @@ const ExchangeRequestDialog = ({
     }
   };
 
-  const onSubmit = (values: ExchangeFormValues) => {
-    // Simulate API call to submit exchange request
-    console.log("Submitting exchange request:", values);
-    
-    // In a real app, you would send this data to your backend
-    setTimeout(() => {
-      toast({
-        title: "Exchange request sent!",
-        description: `Your exchange request for "${itemName}" has been sent to the trader.`,
-      });
+  const onFormSubmit = async (values: ExchangeFormValues) => {
+    try {
+      await onSubmit(values); // Call the provided onSubmit with form data
       resetForm();
       onClose();
-    }, 1500);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to send exchange request. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Exchange request error:", err);
+    }
   };
 
   const resetForm = () => {
@@ -97,9 +98,9 @@ const ExchangeRequestDialog = ({
             Provide details about the item you want to exchange for "{itemName}".
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -107,10 +108,7 @@ const ExchangeRequestDialog = ({
                 <FormItem>
                   <FormLabel>Item Name</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="What item are you offering?" 
-                      {...field} 
-                    />
+                    <Input placeholder="What item are you offering?" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -123,10 +121,7 @@ const ExchangeRequestDialog = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -135,8 +130,8 @@ const ExchangeRequestDialog = ({
                     <SelectContent>
                       <SelectGroup>
                         {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -154,7 +149,7 @@ const ExchangeRequestDialog = ({
                 <FormItem>
                   <FormLabel>Item Details</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Describe your item's condition, age, features, etc."
                       rows={3}
                       {...field}
@@ -178,10 +173,10 @@ const ExchangeRequestDialog = ({
                     <div className="border-2 border-dashed rounded-md p-4">
                       {imagePreview ? (
                         <div className="relative">
-                          <img 
-                            src={imagePreview} 
-                            alt="Item preview" 
-                            className="mx-auto max-h-40 object-contain rounded" 
+                          <img
+                            src={imagePreview}
+                            alt="Item preview"
+                            className="mx-auto max-h-40 object-contain rounded"
                           />
                           <Button
                             variant="outline"
@@ -222,12 +217,12 @@ const ExchangeRequestDialog = ({
             />
 
             <DialogFooter>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   resetForm();
                   onClose();
-                }} 
+                }}
                 disabled={isSubmitting}
                 type="button"
               >

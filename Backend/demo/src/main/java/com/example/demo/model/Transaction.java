@@ -25,7 +25,7 @@ public class Transaction {
     private Item item;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @JoinColumn(name = "user_id")
     private UserAccount user;
 
     private String type;

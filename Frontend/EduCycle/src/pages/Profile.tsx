@@ -13,6 +13,7 @@ import type { User, Transaction, TransactionType } from "@/types/user";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
+import type { Post } from "@/types/user";
 
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -24,7 +25,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchData = async () => {
       const userId = localStorage.getItem("userId");
-    
+
       if (!userId) {
         toast.error("User not logged in");
         navigate("/login");
@@ -77,7 +78,7 @@ const Profile = () => {
 
   const getTransactionIcon = (type: TransactionType) => {
     switch (type) {
-      case "Purchase":
+      case "Liquidation":
         return <ShoppingBag className="h-4 w-4 text-blue-500" />;
       case "Donation":
         return <Heart className="h-4 w-4 text-red-500" />;
@@ -92,12 +93,20 @@ const Profile = () => {
 
   const renderAmountCell = (tx: Transaction) => {
     if (tx.type === "Exchange") {
-      return <span className="text-sm">{tx.amount}</span>;
+      return <span className="text-sm">{tx.transactionId || "1"}</span>;
     } else if (tx.type === "Donation") {
       return <span className="text-sm text-muted-foreground">-</span>;
     } else {
-      return <span className="text-sm font-medium">{tx.amount}</span>;
+      return <span className="text-sm font-medium">{tx.transactionId || "1"}</span>;
     }
+  };
+
+  // Helper function to safely get the owner name
+  const getOwnerName = (tx: Post): string => {
+    if (tx.item?.owner?.name) {
+      return tx.item?.owner?.name;
+    }
+    return "Unknown"; // Fallback for missing or null data
   };
 
   if (loading || !user) {
@@ -175,7 +184,7 @@ const Profile = () => {
               <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
                 <TabsList className="mb-4">
                   <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="purchase">Purchases</TabsTrigger>
+                  <TabsTrigger value="liquidation">Liquidations</TabsTrigger>
                   <TabsTrigger value="exchange">Exchanges</TabsTrigger>
                   <TabsTrigger value="donation">Donations</TabsTrigger>
                   <TabsTrigger value="fundraiser">Fundraisers</TabsTrigger>
@@ -188,7 +197,7 @@ const Profile = () => {
                         <TableHead>Item</TableHead>
                         <TableHead>Owner</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Amount/Received</TableHead>
+                        <TableHead>Code</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Action</TableHead>
                       </TableRow>
@@ -204,10 +213,10 @@ const Profile = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {tx.item && typeof tx.item.itemName === "string" ? tx.item.itemName : "None"} 
+                              {tx.item?.itemName ?? "None"}
                             </TableCell>
                             <TableCell>
-                              {tx.activity ? tx.activity.organizer.name : tx.post.seller.name}
+                              {getOwnerName(tx)}
                             </TableCell>
                             <TableCell>
                               {tx.createdAt ? format(new Date(tx.createdAt), "yyyy-MM-dd HH:mm:ss") : "N/A"}
@@ -230,7 +239,7 @@ const Profile = () => {
                             </TableCell>
                             <TableCell>
                               {tx.type === "Fundraiser" ? (
-                                <Link to={`/fundraisers/${tx.item.itemId?.replace("a", "")}`}>
+                                <Link to={`/fundraisers/${tx.item?.itemId?.replace("a", "")}`}>
                                   <Button variant="outline" size="sm">View</Button>
                                 </Link>
                               ) : (

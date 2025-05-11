@@ -80,7 +80,7 @@ public class ItemService {
         // Create Item entity
         Item item = new Item();
         item.setItemId(itemId);
-        item.setItemName(postDTO.getItemName());
+        item.setItemName(postDTO.getTitle());
         item.setDescription(postDTO.getDescription());
         item.setImageUrl(postDTO.getImageUrl());
         item.setOwner(owner);

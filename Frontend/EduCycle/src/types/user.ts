@@ -63,7 +63,7 @@ export interface Fundraiser {
 }
 
 // Type for TransactionType, matching Transactions.type with Sale mapped from Purchase
-export type TransactionType = "Purchase" | "Exchange" | "Donation" | "Fundraiser";
+export type TransactionType = "Liquidation" | "Exchange" | "Donation" | "Fundraiser";
 
 // Interface for Transaction, matching Transactions table and backend DTO
 export interface Transaction {
